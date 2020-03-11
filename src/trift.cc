@@ -3,7 +3,7 @@
 #include "timer.c"
 
 void trift(double *x, double *y, double *flux, double *u, double *v, \
-        std::complex<double> *vis, int nx, int nu) {
+        double *vis_real, double *vis_imag, int nx, int nu) {
 
     // Set up the coordinates for the triangulation.
 
@@ -46,9 +46,6 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
     
     Vector<double, 3> zhat(0., 0., 1.);
 
-    double *vis_real = new double[nu];
-    double *vis_imag = new double[nu];
-
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
         double intensity_triangle = (flux[d.triangles[i]] + 
             flux[d.triangles[i+1]] + flux[d.triangles[i+2]]) / 3.;
@@ -88,16 +85,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
         }
     }
 
-    // Now add real and imaginary together.
-
-    std::complex<double> I(0,1);
-
-    for (std::size_t i = 0; i < (std::size_t) nu; i++) {
-        vis[i] = vis_real[i] + I*vis_imag[i];
-    }
-
     // Clean up.
 
     delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
-    delete[] vis_real; delete[] vis_imag;
 }
