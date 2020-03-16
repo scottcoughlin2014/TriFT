@@ -2,8 +2,9 @@
 #include <delaunator.hpp>
 #include "timer.c"
 
-void trift(double *x, double *y, double *flux, double *u, double *v, \
-        double *vis_real, double *vis_imag, int nx, int nu) {
+void trift(double *x, double *y, double *flux, double *u, double *v,
+        double *vis_real, double *vis_imag, int nx, int nu, double dx, 
+        double dy) {
 
     // Set up the coordinates for the triangulation.
 
@@ -25,7 +26,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
     double *sin_rn_dot_uv = new double[nx*nu];
     double *cos_rn_dot_uv = new double[nx*nu];
 
-    TCREATE(moo); TCLEAR(moo); TSTART(moo);
+    //TCREATE(moo); TCLEAR(moo); TSTART(moo);
     for (int i = 0; i < nx; i++) {
         Vector <double, 3> rn(x[i], y[i], 0.);
 
@@ -39,8 +40,8 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
             sin_rn_dot_uv[idx + j] = sin(rn_dot_uv[idx + j]);
         }
     }
-    TSTOP(moo);
-    printf("%f\n", TGIVE(moo));
+    //TSTOP(moo);
+    //printf("%f\n", TGIVE(moo));
 
     // Loop through and take the Fourier transform of each triangle.
     
@@ -84,6 +85,25 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
             }
         }
     }
+
+    // Do the centering of the data.
+
+    Vector<double, 2> center(-dx, -dy);
+
+    //TCLEAR(moo); TSTART(moo);
+    for (std::size_t i = 0; i < (std::size_t) nu; i++) {
+        Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
+
+        double vis_real_temp = vis_real[i]*cos(center.dot(uv)) - vis_imag[i]*
+            sin(center.dot(uv));
+        double vis_imag_temp = vis_real[i]*sin(center.dot(uv)) + vis_imag[i]*
+            cos(center.dot(uv));
+
+        vis_real[i] = vis_real_temp;
+        vis_imag[i] = vis_imag_temp;
+    }
+    //TSTOP(moo);
+    //printf("%f\n", TGIVE(moo));
 
     // Clean up.
 

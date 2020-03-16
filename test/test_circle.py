@@ -32,16 +32,17 @@ u = numpy.linspace(0.,10.,1000)
 v = numpy.repeat(0., 1000)
 
 t1 = time.time()
-vis = trift.trift_c(x, y, flux, u, v)
+vis = trift.trift_c(x, y, flux, u, v, 0.25, 0.25)
 t2 = time.time()
 print(t2 - t1)
 
 # Calculate the analytic result.
 
-vis_analytic = scipy.special.jv(1, 2*numpy.pi*u) / u
+vis_analytic = scipy.special.jv(1, 2*numpy.pi*u) / u * numpy.exp(2*numpy.pi*\
+        1j*(0.25*u + 0.25*v))
 
 # Finally, plot the visibilities.
 
 plt.plot(u, vis.real, "k-")
-plt.plot(u, vis_analytic, "b.-")
+plt.plot(u, vis_analytic.real, "b.-")
 plt.show()

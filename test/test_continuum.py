@@ -88,12 +88,8 @@ u = u.reshape((-1,))
 v = v.reshape((-1,))
 
 t1 = time.time()
-"""
-vis = trift.trift_c(m.images["image"].x, m.images["image"].y, \
-        m.images["image"].image[:,0], u, v)
-"""
 vis = uv.interpolate_model(u, v, numpy.array([2.3e11]), m.images["image"], \
-        code="trift")
+        code="trift", dRA=0.25, dDec=0.5)
 t2 = time.time()
 print(t2 - t1)
 

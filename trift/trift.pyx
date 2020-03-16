@@ -13,7 +13,8 @@ def trift_c(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=1, mode="c"] y, \
         numpy.ndarray[double, ndim=1, mode="c"] flux, \
         numpy.ndarray[double, ndim=1, mode="c"] u, \
-        numpy.ndarray[double, ndim=1, mode="c"] v):
+        numpy.ndarray[double, ndim=1, mode="c"] v, \
+        double dx, double dy):
 
     cdef numpy.ndarray[double, ndim=1] vis_real = numpy.zeros((u.size,), \
             dtype=numpy.double)
@@ -21,7 +22,7 @@ def trift_c(numpy.ndarray[double, ndim=1, mode="c"] x, \
             dtype=numpy.double)
 
     trift(&x[0], &y[0], &flux[0], &u[0], &v[0], &vis_real[0], &vis_imag[0], \
-            x.size, u.size)
+            x.size, u.size, dx, dy)
 
     cdef numpy.ndarray[complex, ndim=1] vis = vis_real + 1j*vis_imag
 
