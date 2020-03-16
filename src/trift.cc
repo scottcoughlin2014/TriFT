@@ -32,11 +32,11 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
         std::size_t idx = i * nu;
 
         for (std::size_t j = 0; j < (std::size_t) nu; j++) {
-            Vector <double, 3> uv(u[j], v[j], 0.);
+            Vector <double, 3> uv(2*pi*u[j], 2*pi*v[j], 0.);
 
             rn_dot_uv[idx + j] = rn.dot(uv);
-            cos_rn_dot_uv[idx + j] = cos(2.*pi*rn_dot_uv[idx + j]);
-            sin_rn_dot_uv[idx + j] = sin(2.*pi*rn_dot_uv[idx + j]);
+            cos_rn_dot_uv[idx + j] = cos(rn_dot_uv[idx + j]);
+            sin_rn_dot_uv[idx + j] = sin(rn_dot_uv[idx + j]);
         }
     }
     TSTOP(moo);
@@ -75,7 +75,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v, \
             std::size_t idx = i_rn * nu;
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                Vector <double, 3> uv(u[k], v[k], 0.);
+                Vector <double, 3> uv(2*pi*u[k], 2*pi*v[k], 0.);
                 
                 vis_real[k] += intensity_triangle * ln_1_dot_zhat_cross_ln /
                     (ln.dot(uv) * ln_1.dot(uv)) * cos_rn_dot_uv[idx + k];
