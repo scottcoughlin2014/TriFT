@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import pdspy.interferometry as uv
 import pdspy.modeling as modeling
 import pdspy.dust as dust
 import matplotlib.pyplot as plt
@@ -80,19 +81,23 @@ plt.show()
 
 # Do the Fourier transform with TrIFT
 
-u, v = numpy.meshgrid(numpy.linspace(-5.,5.,100), \
-        numpy.linspace(-5.,5.,100))
+u, v = numpy.meshgrid(numpy.linspace(-1.e6,1.e6,100), \
+        numpy.linspace(-1.e6,1.e6,100))
 
 u = u.reshape((-1,))
 v = v.reshape((-1,))
 
 t1 = time.time()
+"""
 vis = trift.trift_c(m.images["image"].x, m.images["image"].y, \
         m.images["image"].image[:,0], u, v)
+"""
+vis = uv.interpolate_model(u, v, numpy.array([2.3e11]), m.images["image"], \
+        code="trift")
 t2 = time.time()
 print(t2 - t1)
 
 # Finally, plot the visibilities.
 
-plt.imshow(vis.real.reshape((100,100)))
+plt.imshow(vis.real[:,0].reshape((100,100)))
 plt.show()
