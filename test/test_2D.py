@@ -10,7 +10,7 @@ import time
 
 # Make an image.
 
-grid = pyDOE.lhs(2, samples=100000)
+grid = pyDOE.lhs(2, samples=30000)
 
 x = grid[:,0] * 4 - 2.
 y = grid[:,1] * 4 - 2.
@@ -47,7 +47,7 @@ vis_analytic = numpy.zeros(vis.shape, dtype=complex)
 vis_analytic[:,0] = scipy.special.jv(1, 2*numpy.pi*u) / u * \
         numpy.exp(2*numpy.pi*1j*(0.25*u + 0.25*v))
 
-vis_analytic[:,1] = 2./numpy.pi*numpy.sin(2*numpy.pi*u) / u * \
+vis_analytic[:,1] = 4.*numpy.sinc(2*u) * numpy.sinc(2*v) * \
         numpy.exp(2*numpy.pi*1j*(0.25*u + 0.25*v))
 
 # Finally, plot the visibilities.
