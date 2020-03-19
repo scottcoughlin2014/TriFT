@@ -10,12 +10,15 @@ import time
 
 # Make an image.
 
-r, phi = numpy.meshgrid(numpy.hstack((numpy.linspace(0.,0.98,15), \
-        numpy.linspace(0.98,1.02,30), numpy.linspace(1.02,2.,15))), \
-        numpy.linspace(0.,2*numpy.pi,100))
+grid = pyDOE.lhs(2, samples=100)
 
-r = r.reshape((r.size,))*numpy.random.uniform(0.999,1.001,r.size)
-phi = phi.reshape((phi.size,))*numpy.random.uniform(0.999,1.001,phi.size)
+r = grid[:,0] * 2
+phi = grid[:,1] * 2*numpy.pi
+
+grid = pyDOE.lhs(2, samples=2000)
+
+r = numpy.hstack((r, grid[:,0]*0.04 + 0.98))
+phi = numpy.hstack((phi, grid[:,1]*2*numpy.pi))
 
 x = r * numpy.cos(phi)
 y = r * numpy.sin(phi)
@@ -27,6 +30,7 @@ flux = numpy.where(r < 1., 1., 0.)
 triang = tri.Triangulation(x, y)
 
 plt.tripcolor(triang, flux, "ko-")
+plt.triplot(triang, "k.-", linewidth=0.1, markersize=0.1)
 plt.show()
 
 # Do the Fourier transform with TrIFT
