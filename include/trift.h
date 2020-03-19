@@ -10,7 +10,7 @@
 const double pi = 3.14159265;
 
 void trift(double *x, double *y, double *flux, double *u, double *v,
-        double *vis_real, double *vis_imag, int nx, int nu, double dx,
-        double dy);
+        double *vis_real, double *vis_imag, int nx, int nu, int nv,
+        double dx, double dy);
 
 #endif

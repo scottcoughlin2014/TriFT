@@ -3,8 +3,8 @@
 #include "timer.c"
 
 void trift(double *x, double *y, double *flux, double *u, double *v,
-        double *vis_real, double *vis_imag, int nx, int nu, double dx, 
-        double dy) {
+        double *vis_real, double *vis_imag, int nx, int nu, int nv,
+        double dx, double dy) {
 
     // Set up the coordinates for the triangulation.
 
@@ -47,9 +47,18 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
     
     Vector<double, 3> zhat(0., 0., 1.);
 
+    double *intensity_triangle = new double[nv];
+
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
-        double intensity_triangle = (flux[d.triangles[i]] + 
-            flux[d.triangles[i+1]] + flux[d.triangles[i+2]]) / 3.;
+        // Get the intensity of the triangle at each wavelength.
+
+        for (std::size_t l = 0; l < (std::size_t) nv; l++) {
+            intensity_triangle[l] = (flux[d.triangles[i*nv+l]] + 
+                flux[d.triangles[(i+1)*nv+l]] + 
+                flux[d.triangles[(i+2)*nv+l]]) / 3.;
+        }
+        
+        // Calculate the FT
 
         for (int j = 0; j < 3; j++) {
             // Calculate the vectors for the vertices of the triangle.
@@ -77,11 +86,17 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 Vector <double, 3> uv(2*pi*u[k], 2*pi*v[k], 0.);
+
+                std::size_t idy = k * nv;
                 
-                vis_real[k] += intensity_triangle * ln_1_dot_zhat_cross_ln /
-                    (ln.dot(uv) * ln_1.dot(uv)) * cos_rn_dot_uv[idx + k];
-                vis_imag[k] += intensity_triangle * ln_1_dot_zhat_cross_ln /
-                    (ln.dot(uv) * ln_1.dot(uv)) * sin_rn_dot_uv[idx + k];
+                for (std::size_t l = 0; l < (std::size_t) nv; l++) {
+                    vis_real[idy+l] += intensity_triangle[l] * 
+                        ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
+                        cos_rn_dot_uv[idx + k];
+                    vis_imag[idy+l] += intensity_triangle[l] * 
+                        ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
+                        sin_rn_dot_uv[idx + k];
+                }
             }
         }
     }
@@ -108,4 +123,5 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
     // Clean up.
 
     delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
+    delete[] intensity_triangle;
 }
