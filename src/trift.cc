@@ -7,7 +7,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
         double dx, double dy) {
 
     // Set up the coordinates for the triangulation.
-
+    
     std::vector<double> coords;
 
     for (int i=0; i < nx; i++) {
@@ -53,11 +53,10 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
         // Get the intensity of the triangle at each wavelength.
 
         for (std::size_t l = 0; l < (std::size_t) nv; l++) {
-            intensity_triangle[l] = (flux[d.triangles[i*nv+l]] + 
-                flux[d.triangles[(i+1)*nv+l]] + 
-                flux[d.triangles[(i+2)*nv+l]]) / 3.;
+            intensity_triangle[l] = (flux[d.triangles[i]*nv+l] + 
+                flux[d.triangles[i+1]*nv+l] + flux[d.triangles[i+2]*nv+l]) / 3.;
         }
-        
+
         // Calculate the FT
 
         for (int j = 0; j < 3; j++) {
@@ -109,13 +108,16 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
         Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
 
-        double vis_real_temp = vis_real[i]*cos(center.dot(uv)) - vis_imag[i]*
-            sin(center.dot(uv));
-        double vis_imag_temp = vis_real[i]*sin(center.dot(uv)) + vis_imag[i]*
-            cos(center.dot(uv));
+        for (std::size_t j = 0; j < (std::size_t) nv; j++) {
 
-        vis_real[i] = vis_real_temp;
-        vis_imag[i] = vis_imag_temp;
+            double vis_real_temp = vis_real[i*nv+j]*cos(center.dot(uv)) - 
+                vis_imag[i*nv+j]*sin(center.dot(uv));
+            double vis_imag_temp = vis_real[i*nv+j]*sin(center.dot(uv)) + 
+                vis_imag[i*nv+j]*cos(center.dot(uv));
+
+            vis_real[i*nv+j] = vis_real_temp;
+            vis_imag[i*nv+j] = vis_imag_temp;
+        }
     }
     //TSTOP(moo);
     //printf("%f\n", TGIVE(moo));
