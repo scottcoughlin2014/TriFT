@@ -156,6 +156,10 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu, int nv,
         double dx, double dy, int nthreads) {
 
+    // Use only 1 thread first, otherwise Delaunator could have a segfault.
+
+    omp_set_num_threads(1);
+
     // Set up the coordinates for the triangulation.
     
     std::vector<double> coords;
@@ -169,6 +173,10 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
 
     delaunator::Delaunator d(coords);
 
+    // Set the number of threads to be used.
+
+    omp_set_num_threads(nthreads);
+
     // Pre-calculate the exp(-2*pi*i*rn.dot(uv)) factor as each vertex is part
     // of a number of triangles.
 
@@ -177,17 +185,15 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
     double *cos_rn_dot_uv = new double[nx*nu];
 
     //TCREATE(moo); TCLEAR(moo); TSTART(moo);
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx; i++) {
-        Vector <double, 3> rn(x[i], y[i], 0.);
-
-        std::size_t idx = i * nu;
-
         for (std::size_t j = 0; j < (std::size_t) nu; j++) {
+            Vector <double, 3> rn(x[i], y[i], 0.);
             Vector <double, 3> uv(2*pi*u[j], 2*pi*v[j], 0.);
 
-            rn_dot_uv[idx + j] = rn.dot(uv);
-            cos_rn_dot_uv[idx + j] = cos(rn_dot_uv[idx + j]);
-            sin_rn_dot_uv[idx + j] = sin(rn_dot_uv[idx + j]);
+            rn_dot_uv[i * nu + j] = rn.dot(uv);
+            cos_rn_dot_uv[i * nu + j] = cos(rn_dot_uv[i * nu + j]);
+            sin_rn_dot_uv[i * nu + j] = sin(rn_dot_uv[i * nu + j]);
         }
     }
     //TSTOP(moo);
@@ -197,8 +203,22 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
     
     Vector<double, 3> zhat(0., 0., 1.);
 
+    double **vis_real_tmp = new double*[nthreads];
+    double **vis_imag_tmp = new double*[nthreads];
+    #pragma omp parallel
+    {
+    int thread_id = omp_get_thread_num();
+
+    vis_real_tmp[thread_id] = new double[nu*nv];
+    vis_imag_tmp[thread_id] = new double[nu*nv];
+    for (std::size_t i = 0; i < (std::size_t) nu*nv; i++) {
+        vis_real_tmp[thread_id][i] = 0;
+        vis_imag_tmp[thread_id][i] = 0;
+    }
+
     double *intensity_triangle = new double[nv];
 
+    #pragma omp for
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
         // Get the intensity of the triangle at each wavelength.
 
@@ -239,26 +259,45 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
                 std::size_t idy = k * nv;
                 
                 for (std::size_t l = 0; l < (std::size_t) nv; l++) {
-                    vis_real[idy+l] += intensity_triangle[l] * 
+                    vis_real_tmp[thread_id][idy+l] += intensity_triangle[l] * 
                         ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
                         cos_rn_dot_uv[idx + k];
-                    vis_imag[idy+l] += intensity_triangle[l] * 
+                    vis_imag_tmp[thread_id][idy+l] += intensity_triangle[l] * 
                         ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
                         sin_rn_dot_uv[idx + k];
                 }
             }
         }
     }
+    delete[] intensity_triangle;
+    }
+
+    // Now add together all of the separate vis'.
+
+    #pragma omp parallel for
+    for (std::size_t i = 0; i < (std::size_t) nu*nv; i++) {
+        for (std::size_t j = 0; j < (std::size_t) nthreads; j++) {
+            vis_real[i] += vis_real_tmp[j][i];
+            vis_imag[i] += vis_imag_tmp[j][i];
+        }
+    }
+
+    // And clean up the tmp arrays.
+    
+    for (std::size_t i = 0; i < (std::size_t) nthreads; i++) {
+        delete[] vis_real_tmp[i]; delete[] vis_imag_tmp[i];
+    }
+    delete[] vis_real_tmp; delete[] vis_imag_tmp;
 
     // Do the centering of the data.
 
     Vector<double, 2> center(-dx, -dy);
 
     //TCLEAR(moo); TSTART(moo);
+    #pragma omp parallel for collapse(2)
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
-        Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
-
         for (std::size_t j = 0; j < (std::size_t) nv; j++) {
+            Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
 
             double vis_real_temp = vis_real[i*nv+j]*cos(center.dot(uv)) - 
                 vis_imag[i*nv+j]*sin(center.dot(uv));
@@ -275,5 +314,4 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
     // Clean up.
 
     delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
-    delete[] intensity_triangle;
 }
