@@ -10,7 +10,7 @@ os.environ["CXX"] = "gcc-9"
 
 trift = Extension("trift.trift",sources=["trift/trift.pyx","src/trift.cc"],\
         include_dirs=[numpy.get_include(),"./include"], language="c++", \
-        extra_compile_args=['-std=c++11','-Ofast','-fopenmp'],\
-        extra_link_args=["-std=c++11",'-Ofast','-fopenmp'])
+        extra_compile_args=['-std=c++11','-O3','-fopenmp'],\
+        extra_link_args=["-std=c++11",'-O3','-fopenmp'])
 
 setup(cmdclass = {'build_ext': build_ext}, ext_modules = [trift])
