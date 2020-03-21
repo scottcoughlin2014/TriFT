@@ -14,7 +14,7 @@ def trift_c(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=1, mode="c"] flux, \
         numpy.ndarray[double, ndim=1, mode="c"] u, \
         numpy.ndarray[double, ndim=1, mode="c"] v, \
-        double dx, double dy):
+        double dx, double dy, **kwargs):
 
     cdef numpy.ndarray[double, ndim=1] vis_real = numpy.zeros((u.size,), \
             dtype=numpy.double)
@@ -33,7 +33,7 @@ def trift_2D(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=2, mode="c"] flux, \
         numpy.ndarray[double, ndim=1, mode="c"] u, \
         numpy.ndarray[double, ndim=1, mode="c"] v, \
-        double dx, double dy):
+        double dx, double dy, **kwargs):
 
     cdef int nv = flux.shape[1]
 
