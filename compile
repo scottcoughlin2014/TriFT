@@ -1,4 +1,4 @@
-python3 setup.py build_ext --inplace
+CC=g++-9 CXX=g++-9 python3 setup.py build_ext --inplace
 
 rm -r build/
 rm trift/*.cpp
