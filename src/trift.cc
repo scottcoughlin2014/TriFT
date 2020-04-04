@@ -262,5 +262,4 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
     // Clean up.
 
     //delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
-    delete[] intensity_triangle;
 }
