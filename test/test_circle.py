@@ -31,6 +31,14 @@ triang = tri.Triangulation(x, y)
 
 plt.tripcolor(triang, flux, "ko-")
 plt.triplot(triang, "k.-", linewidth=0.1, markersize=0.1)
+
+plt.axes().set_aspect("equal")
+
+plt.xlabel("x", fontsize=14)
+plt.ylabel("y", fontsize=14)
+
+plt.axes().tick_params(labelsize=14)
+
 plt.show()
 
 # Do the Fourier transform with TrIFT
@@ -50,6 +58,16 @@ vis_analytic = scipy.special.jv(1, 2*numpy.pi*u) / u * numpy.exp(2*numpy.pi*\
 
 # Finally, plot the visibilities.
 
-plt.plot(u, vis.real, "k.-")
-plt.plot(u, vis_analytic.real, "r-")
+plt.plot(u, vis.real, "k.-", label="Unstructured Fourier Transform")
+plt.plot(u, vis_analytic.real, "r-", label="Analytic Solution")
+
+plt.xlabel("u", fontsize=14)
+plt.ylabel("Real Component", fontsize=14)
+
+plt.legend(fontsize=14)
+
+plt.axes().tick_params(labelsize=14)
+
+plt.subplots_adjust(left=0.17, right=0.95, top=0.99)
+
 plt.show()
