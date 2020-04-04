@@ -19,30 +19,6 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
 
     delaunator::Delaunator d(coords);
 
-    // Pre-calculate the exp(-2*pi*i*rn.dot(uv)) factor as each vertex is part
-    // of a number of triangles.
-
-    double *rn_dot_uv = new double[nx*nu];
-    double *sin_rn_dot_uv = new double[nx*nu];
-    double *cos_rn_dot_uv = new double[nx*nu];
-
-    //TCREATE(moo); TCLEAR(moo); TSTART(moo);
-    for (int i = 0; i < nx; i++) {
-        Vector <double, 3> rn(x[i], y[i], 0.);
-
-        std::size_t idx = i * nu;
-
-        for (std::size_t j = 0; j < (std::size_t) nu; j++) {
-            Vector <double, 3> uv(2*pi*u[j], 2*pi*v[j], 0.);
-
-            rn_dot_uv[idx + j] = rn.dot(uv);
-            cos_rn_dot_uv[idx + j] = cos(rn_dot_uv[idx + j]);
-            sin_rn_dot_uv[idx + j] = sin(rn_dot_uv[idx + j]);
-        }
-    }
-    //TSTOP(moo);
-    //printf("%f\n", TGIVE(moo));
-
     // Loop through and take the Fourier transform of each triangle.
     
     Vector<double, 3> zhat(0., 0., 1.);
@@ -73,15 +49,15 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
 
             double ln_1_dot_zhat_cross_ln = ln_1.dot(zhat.cross(ln));
 
-            std::size_t idx = i_rn * nu;
-
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 Vector <double, 3> uv(2*pi*u[k], 2*pi*v[k], 0.);
+
+                double rn_dot_uv = rn.dot(uv);
                 
                 vis_real[k] += intensity_triangle * ln_1_dot_zhat_cross_ln /
-                    (ln.dot(uv) * ln_1.dot(uv)) * cos_rn_dot_uv[idx + k];
+                    (ln.dot(uv) * ln_1.dot(uv)) * cos(rn_dot_uv);
                 vis_imag[k] += intensity_triangle * ln_1_dot_zhat_cross_ln /
-                    (ln.dot(uv) * ln_1.dot(uv)) * sin_rn_dot_uv[idx + k];
+                    (ln.dot(uv) * ln_1.dot(uv)) * sin(rn_dot_uv);
             }
         }
     }
@@ -107,7 +83,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
 
     // Clean up.
 
-    delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
+    //delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
 }
 
 void trift2D(double *x, double *y, double *flux, double *u, double *v,
@@ -126,30 +102,6 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
     // Run the Delauney triangulation here.
 
     delaunator::Delaunator d(coords);
-
-    // Pre-calculate the exp(-2*pi*i*rn.dot(uv)) factor as each vertex is part
-    // of a number of triangles.
-
-    double *rn_dot_uv = new double[nx*nu];
-    double *sin_rn_dot_uv = new double[nx*nu];
-    double *cos_rn_dot_uv = new double[nx*nu];
-
-    //TCREATE(moo); TCLEAR(moo); TSTART(moo);
-    for (int i = 0; i < nx; i++) {
-        Vector <double, 3> rn(x[i], y[i], 0.);
-
-        std::size_t idx = i * nu;
-
-        for (std::size_t j = 0; j < (std::size_t) nu; j++) {
-            Vector <double, 3> uv(2*pi*u[j], 2*pi*v[j], 0.);
-
-            rn_dot_uv[idx + j] = rn.dot(uv);
-            cos_rn_dot_uv[idx + j] = cos(rn_dot_uv[idx + j]);
-            sin_rn_dot_uv[idx + j] = sin(rn_dot_uv[idx + j]);
-        }
-    }
-    //TSTOP(moo);
-    //printf("%f\n", TGIVE(moo));
 
     // Loop through and take the Fourier transform of each triangle.
     
@@ -189,20 +141,20 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
 
             double ln_1_dot_zhat_cross_ln = ln_1.dot(zhat.cross(ln));
 
-            std::size_t idx = i_rn * nu;
-
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 Vector <double, 3> uv(2*pi*u[k], 2*pi*v[k], 0.);
 
-                std::size_t idy = k * nv;
+                double rn_dot_uv = rn.dot(uv);
                 
+                std::size_t idy = k * nv;
+
                 for (std::size_t l = 0; l < (std::size_t) nv; l++) {
                     vis_real[idy+l] += intensity_triangle[l] * 
                         ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
-                        cos_rn_dot_uv[idx + k];
+                        cos(rn_dot_uv);
                     vis_imag[idy+l] += intensity_triangle[l] * 
                         ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
-                        sin_rn_dot_uv[idx + k];
+                        sin(rn_dot_uv);
                 }
             }
         }
@@ -232,6 +184,6 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
 
     // Clean up.
 
-    delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
+    //delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
     delete[] intensity_triangle;
 }
