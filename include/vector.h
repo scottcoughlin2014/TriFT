@@ -186,8 +186,8 @@ Vector<Type1, D> operator* (const Vector<Type1, D> lhs, Type2 rhs) {
 }
 
 template<typename Type1, typename Type2, int D>
-Vector<Type1, D> operator* (Type1 lhs, const Vector<Type2, D> rhs) {
-    Vector<Type1, D> new_vector(0);
+Vector<Type2, D> operator* (Type1 lhs, const Vector<Type2, D> rhs) {
+    Vector<Type2, D> new_vector(0);
     for (int i=0; i<D; i++) new_vector.v[i] = lhs * rhs.v[i];
     return new_vector;
 }
