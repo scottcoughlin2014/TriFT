@@ -111,10 +111,68 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
     Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
         3>[nu];
-    for (std::size_t i = 0; i < (std::size_t) nu; i++)
-        integral[i] = 0.;
+
+    Vector<double, 3> *bessel1 = new Vector<double, 3>[nu*3];
+    Vector<double, 3> *bessel0_prefix1 = new Vector<double, 3>[nu*3];
+    Vector<double, 3> *bessel0_prefix2 = new Vector<double, 3>[nu*3];
+    double *bessel0_prefix3 = new double[nu*3];
+    Vector<double, 3> *bessel0_prefix4 = new Vector<double, 3>[nu*3];
+    double *bessel0 = new double[nu*3];
+    std::complex<double> *exp_part = new std::complex<double>[nu*3];
 
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
+        // Calculate the area of the triangle.
+
+        Vector<double, 3> Vertex1(x[d.triangles[i+0]], y[d.triangles[i+0]], 0.);
+        Vector<double, 3> Vertex2(x[d.triangles[i+1]], y[d.triangles[i+1]], 0.);
+        Vector<double, 3> Vertex3(x[d.triangles[i+2]], y[d.triangles[i+2]], 0.);
+
+        Vector<double, 3> Side1 = Vertex2 - Vertex1;
+        Vector<double, 3> Side2 = Vertex3 - Vertex1;
+
+        double Area = 0.5 * (Side1.cross(Side2)).norm();
+
+        // Precompute some aspects of the integral that remain the same.
+
+        for (int m = 0; m < 3; m++) {
+            // Get the appropriate vertices.
+
+            std::size_t i_rm1 = d.triangles[i + (m+1)%3];
+            Vector<double, 3> rm1(x[i_rm1], y[i_rm1],  0.);
+
+            std::size_t i_rm = d.triangles[i + m];
+            Vector<double, 3> rm(x[i_rm], y[i_rm],  0.);
+
+            // Calculate the needed derivatives of those.
+
+            Vector<double, 3> lm = rm1 - rm;
+            Vector<double, 3> r_mc = 0.5 * (rm1 + rm);
+            Vector<double, 3> zhat_cross_lm = zhat.cross(lm);
+
+            // Now loop through the uv points and calculate the pieces of the 
+            // integral.
+
+            for (std::size_t k = 0; k < (std::size_t) nu; k++) {
+                Vector <double, 3> uv(2*pi*u[k],2*pi*v[k],0.);
+
+                double zhat_dot_lm_cross_uv = zhat.dot(lm.cross(uv));
+
+                bessel0_prefix1[m*nu+k] = zhat_cross_lm;
+                bessel0_prefix2[m*nu+k] = r_mc * zhat_dot_lm_cross_uv;
+                bessel0_prefix3[m*nu+k] = zhat_dot_lm_cross_uv;
+                bessel0_prefix4[m*nu+k] = 2.*uv/uv.dot(uv)*zhat_dot_lm_cross_uv;
+
+                bessel0[m*nu + k] = boost::math::cyl_bessel_j(0,uv.dot(lm)/2.);
+
+                bessel1[m*nu + k] = lm * (zhat.dot(lm.cross(uv))/2.) * 
+                        boost::math::cyl_bessel_j(1,uv.dot(lm)/2.);
+
+                exp_part[m*nu + k] = exp(-I*r_mc.dot(uv)) / (uv.dot(uv));
+            }
+        }
+
+        // Now loop through an do the actual calculation.
+
         for (int j = 0; j < 3; j++) {
             double intensity = flux[d.triangles[i + j]];
 
@@ -132,44 +190,24 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
             // Calculate the vectors for the edges of the triangle.
 
             Vector<double, 3> ln1 = rn_1 - rn1;
-            Vector<double, 3> ln = rn1 - rn;
-            Vector<double, 3> ln_1 = rn - rn_1;
 
             // Now loop through the UV points and calculate the Fourier
             // Transform.
 
             Vector<double, 3> zhat_cross_ln1 = zhat.cross(ln1);
-            double Area = 0.5 * (ln.cross(ln_1)).norm();
 
             for (int m = 0; m < 3; m++) {
-
-                // Get the appropriate vertices.
-
-                std::size_t i_rm1 = d.triangles[i + (m+1)%3];
-                Vector<double, 3> rm1(x[i_rm1], y[i_rm1],  0.);
-
-                std::size_t i_rm = d.triangles[i + m];
-                Vector<double, 3> rm(x[i_rm], y[i_rm],  0.);
-
-                // Calculate the needed derivatives of those.
-
-                Vector<double, 3> lm = rm1 - rm;
-                Vector<double, 3> r_mc = 0.5 * (rm1 + rm);
-                Vector<double, 3> zhat_cross_lm = zhat.cross(lm);
-
-                // Now loop through the uv points and calculate the integral.
-
                 for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                    Vector <double, 3> uv(2*pi*u[k],2*pi*v[k],0.);
-
-                    integral[k] += ((zhat_cross_lm  + (I*r_mc - I*rn1 - 
-                            2.*uv / uv.dot(uv)) * zhat.dot(lm.cross(uv))) *
-                            boost::math::cyl_bessel_j(0,uv.dot(lm)/2.) - 
-                            lm * (zhat.dot(lm.cross(uv))/2.) * 
-                            boost::math::cyl_bessel_j(1,uv.dot(lm)/2.)) * 
-                            exp(-I*r_mc.dot(uv)) / (uv.dot(uv));
+                    integral[k] += ((bessel0_prefix1[m*nu+k] + 
+                            I*bessel0_prefix2[m*nu+k] - 
+                            I*bessel0_prefix3[m*nu+k]*rn1 - 
+                            bessel0_prefix4[m*nu+k]) * bessel0[m*nu+k] - 
+                            bessel1[m*nu+k]) * exp_part[m*nu+k];
                 }
             }
+
+            // Finally put into the real and imaginary components, and clean
+            // out the integral array.
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 vis_real[k] += (intensity * zhat_cross_ln1.dot(integral[k]) / 
@@ -203,7 +241,10 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
     // Clean up.
 
-    delete[] integral;
+    delete[] integral; delete[] bessel1; delete[] bessel0_prefix1;
+    delete[] bessel0_prefix2; delete[] bessel0_prefix3; 
+    delete[] bessel0_prefix4; delete[] bessel0; delete[] exp_part;
+
 }
 
 void trift2D(double *x, double *y, double *flux, double *u, double *v,

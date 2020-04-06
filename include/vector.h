@@ -196,8 +196,9 @@ Vector<typename promote<Type1, Type2>::type, D> operator* (Type1 lhs,
 }
 
 template<typename Type1, typename Type2, int D>
-Vector<Type1, D> operator/ (const Vector<Type1, D> lhs, Type2 rhs) {
-    Vector<Type1, D> new_vector(0);
+Vector<typename promote<Type1, Type2>::type, D> operator/ (
+        const Vector<Type1, D> lhs, Type2 rhs) {
+    Vector<typename promote<Type1, Type2>::type, D> new_vector(0);
     for (int i=0; i<D; i++) new_vector.v[i] = lhs.v[i] / rhs;
     return new_vector;
 }
