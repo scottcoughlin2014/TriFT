@@ -107,7 +107,8 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
     // Loop through and take the Fourier transform of each triangle.
     
     std::complex<double> I = std::complex<double>(0., 1.);
-    Vector<std::complex<double>, 3> zhat(0., 0., 1.);
+    Vector<double, 3> zhat(0., 0., 1.);
+
     Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
         3>[nu];
     for (std::size_t i = 0; i < (std::size_t) nu; i++)
@@ -120,53 +121,53 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
             // Calculate the vectors for the vertices of the triangle.
 
             std::size_t i_rn1 = d.triangles[i + (j+1)%3];
-            Vector<std::complex<double>, 3> rn1(x[i_rn1], y[i_rn1],  0.);
+            Vector<double, 3> rn1(x[i_rn1], y[i_rn1],  0.);
 
             std::size_t i_rn = d.triangles[i + j];
-            Vector<std::complex<double>, 3> rn(x[i_rn], y[i_rn],  0.);
+            Vector<double, 3> rn(x[i_rn], y[i_rn],  0.);
 
             std::size_t i_rn_1 = d.triangles[i + (j+2)%3];
-            Vector<std::complex<double>, 3> rn_1(x[i_rn_1], y[i_rn_1],  0.);
+            Vector<double, 3> rn_1(x[i_rn_1], y[i_rn_1],  0.);
 
             // Calculate the vectors for the edges of the triangle.
 
-            Vector<std::complex<double>, 3> ln1 = rn_1 - rn1;
-            Vector<std::complex<double>, 3> ln = rn1 - rn;
-            Vector<std::complex<double>, 3> ln_1 = rn - rn_1;
+            Vector<double, 3> ln1 = rn_1 - rn1;
+            Vector<double, 3> ln = rn1 - rn;
+            Vector<double, 3> ln_1 = rn - rn_1;
 
             // Now loop through the UV points and calculate the Fourier
             // Transform.
 
-            Vector<std::complex<double>, 3> zhat_cross_ln1 = zhat.cross(ln1);
-            std::complex<double> Area = 0.5 * (ln.cross(ln_1)).norm();
+            Vector<double, 3> zhat_cross_ln1 = zhat.cross(ln1);
+            double Area = 0.5 * (ln.cross(ln_1)).norm();
 
             for (int m = 0; m < 3; m++) {
 
                 // Get the appropriate vertices.
 
                 std::size_t i_rm1 = d.triangles[i + (m+1)%3];
-                Vector<std::complex<double>, 3> rm1(x[i_rm1], y[i_rm1],  0.);
+                Vector<double, 3> rm1(x[i_rm1], y[i_rm1],  0.);
 
                 std::size_t i_rm = d.triangles[i + m];
-                Vector<std::complex<double>, 3> rm(x[i_rm], y[i_rm],  0.);
+                Vector<double, 3> rm(x[i_rm], y[i_rm],  0.);
 
                 // Calculate the needed derivatives of those.
 
-                Vector<std::complex<double>, 3> lm = rm1 - rm;
-                Vector<std::complex<double>, 3> r_mc = 0.5 * (rm1 + rm);
-                Vector<std::complex<double>, 3> zhat_cross_lm = zhat.cross(lm);
+                Vector<double, 3> lm = rm1 - rm;
+                Vector<double, 3> r_mc = 0.5 * (rm1 + rm);
+                Vector<double, 3> zhat_cross_lm = zhat.cross(lm);
 
                 // Now loop through the uv points and calculate the integral.
 
                 for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                    Vector <std::complex<double>, 3> uv(2*pi*u[k],2*pi*v[k],0.);
+                    Vector <double, 3> uv(2*pi*u[k],2*pi*v[k],0.);
 
                     integral[k] += ((zhat_cross_lm  + (I*r_mc - I*rn1 - 
                             2.*uv / uv.dot(uv)) * zhat.dot(lm.cross(uv))) *
-                            boost::math::cyl_bessel_j(0,std::abs(uv.dot(lm)/2.))
-                            - lm * (zhat.dot(lm.cross(uv))/2.) * 
-                            boost::math::cyl_bessel_j(1,std::abs(uv.dot(lm)/2.))
-                            ) * exp(-I*r_mc.dot(uv)) / (uv.dot(uv));
+                            boost::math::cyl_bessel_j(0,uv.dot(lm)/2.) - 
+                            lm * (zhat.dot(lm.cross(uv))/2.) * 
+                            boost::math::cyl_bessel_j(1,uv.dot(lm)/2.)) * 
+                            exp(-I*r_mc.dot(uv)) / (uv.dot(uv));
                 }
             }
 
