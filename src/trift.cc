@@ -106,14 +106,16 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
     // Loop through and take the Fourier transform of each triangle.
     
+    std::complex<double> I = std::complex<double>(0., 1.);
     Vector<std::complex<double>, 3> zhat(0., 0., 1.);
     Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
         3>[nu];
-    std::complex<double> I = std::complex<double>(0., 1.);
+    for (std::size_t i = 0; i < (std::size_t) nu; i++)
+        integral[i] = 0.;
 
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
         for (int j = 0; j < 3; j++) {
-            double intensity = flux[d.triangles[i]];
+            double intensity = flux[d.triangles[i + j]];
 
             // Calculate the vectors for the vertices of the triangle.
 
@@ -169,9 +171,9 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
             }
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                vis_real[k] += -(intensity * zhat_cross_ln1.dot(integral[k]) / 
+                vis_real[k] += (intensity * zhat_cross_ln1.dot(integral[k]) / 
                     (2.*Area)).real();
-                vis_imag[k] += -(intensity * zhat_cross_ln1.dot(integral[k]) / 
+                vis_imag[k] += (intensity * zhat_cross_ln1.dot(integral[k]) / 
                     (2.*Area)).imag();
 
                 integral[k] = 0.;
