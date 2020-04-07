@@ -1,7 +1,6 @@
 #include "trift.h"
 #include <delaunator.hpp>
 #include "timer.c"
-#include <boost/math/special_functions/bessel.hpp>
 
 void trift(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu, double dx, 
@@ -87,6 +86,53 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
     //delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
 }
 
+double BesselJ0(double x) {
+    /* Approximation from Tumakov 2019, using their equations 6 and 8. See
+     * documentation for additional details.*/
+
+    if (abs(x) < 8) {
+        double z = 0.12548309 * x;
+        double y = z*z;
+        double p1 = y*(y - 2.4015149);
+
+        y = y + p1;
+
+        double p2 = (p1 + 1.1118167)*(y - 0.25900994) + 0.69601147;
+        double p3 = (p1 + 1.8671225)*(y + 4.7195298) + 2.0662144;
+
+        return p2 * p3 - 3.4387229;
+    }
+    else {
+        double ax = abs(x);
+        double p = 0.63661977/ax;
+        double q = p*p;
+
+        return sqrt(p) * (1. + (0.63021018*q - 0.15421257)*q) * 
+                cos(ax - 0.78539816 + (0.25232973*q - 0.19634954)*p);
+    }
+}
+
+double BesselJ1(double x) {
+    /* Approximation from Maass & Martin 2018. We use the last of their 
+     * approximations, which is the most accurate, and only adds a small 
+     * amount of time compared with the other versions. Paper included in 
+     * documentation. */
+
+    double P0 = -0.7763224930; double P1 = -0.03147133771;
+    double p0 = 1.776322448; double p1 = 0.2250803518;
+    double q1 = 0.4120981204; double q2 = 0.006571619275;
+    double lambda = 0.1; double x2 = x*x; double x4 = x2*x2;
+    double root_denom = sqrt(1 + lambda*lambda * x2);
+    double root_lambda = 0.31622776601683794;
+
+    double P2 = 2 * root_lambda * root_lambda * root_lambda / sqrt(pi) * q2;
+    double p2 = 2 * root_lambda / sqrt(pi) * q2;
+
+    return 0.5 / sqrt(root_denom) * ( (p0 + p1*x2 + p2*x4) * sin(x) / 
+            (1 + q1*x2 + q2*x4) + x / root_denom * (P0 + P1*x2 + P2*x4) * 
+            cos(x) / (1 + q1*x2 + q2*x4));
+}
+
 void trift_extended(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu, double dx, 
         double dy) {
@@ -120,6 +166,7 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
     double *bessel0 = new double[nu*3];
     std::complex<double> *exp_part = new std::complex<double>[nu*3];
 
+    //TCREATE(moo); TCLEAR(moo);
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
         // Calculate the area of the triangle.
 
@@ -134,6 +181,7 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
         // Precompute some aspects of the integral that remain the same.
 
+        //TSTART(moo);
         for (int m = 0; m < 3; m++) {
             // Get the appropriate vertices.
 
@@ -162,14 +210,16 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
                 bessel0_prefix3[m*nu+k] = zhat_dot_lm_cross_uv;
                 bessel0_prefix4[m*nu+k] = 2.*uv/uv.dot(uv)*zhat_dot_lm_cross_uv;
 
-                bessel0[m*nu + k] = boost::math::cyl_bessel_j(0,uv.dot(lm)/2.);
+                bessel0[m*nu + k] = BesselJ0(uv.dot(lm)/2.);
 
                 bessel1[m*nu + k] = lm * (zhat.dot(lm.cross(uv))/2.) * 
-                        boost::math::cyl_bessel_j(1,uv.dot(lm)/2.);
+                        BesselJ1(uv.dot(lm)/2.);
 
-                exp_part[m*nu + k] = exp(-I*r_mc.dot(uv)) / (uv.dot(uv));
+                exp_part[m*nu + k] = (cos(r_mc.dot(uv))+ I*sin(r_mc.dot(uv))) / 
+                        (uv.dot(uv));
             }
         }
+        //TSTOP(moo);
 
         // Now loop through an do the actual calculation.
 
@@ -219,6 +269,7 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
             }
         }
     }
+    //printf("%f\n", TGIVE(moo));
 
     // Do the centering of the data.
 
