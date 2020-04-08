@@ -24,18 +24,26 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
 
     delaunator::Delaunator d(coords);
 
+    // Now set to the appropriate number of threads for the remainder of the 
+    // program.
+
+    omp_set_num_threads(nthreads);
+
     // Loop through and take the Fourier transform of each triangle.
     
     Vector<double, 3> zhat(0., 0., 1.);
 
     double **vis_real_tmp = new double*[nthreads];
     double **vis_imag_tmp = new double*[nthreads];
+    for (std::size_t i = 0; i < (std::size_t) nthreads; i++) {
+        vis_real_tmp[i] = new double[nu];
+        vis_imag_tmp[i] = new double[nu];
+    }
+
     #pragma omp parallel
     {
     int thread_id = omp_get_thread_num();
 
-    vis_real_tmp[thread_id] = new double[nu];
-    vis_imag_tmp[thread_id] = new double[nu];
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
         vis_real_tmp[thread_id][i] = 0;
         vis_imag_tmp[thread_id][i] = 0;
@@ -118,7 +126,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
         vis_real[i] = vis_real_temp;
         vis_imag[i] = vis_imag_temp;
     }
-    //TSTOP(moo);
+
     //printf("%f\n", TGIVE(moo));
 
     // Clean up.
@@ -359,18 +367,26 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
 
     delaunator::Delaunator d(coords);
 
+    // Now set to the appropriate number of threads for the remainder of the 
+    // program.
+
+    omp_set_num_threads(nthreads);
+
     // Loop through and take the Fourier transform of each triangle.
     
     Vector<double, 3> zhat(0., 0., 1.);
 
     double **vis_real_tmp = new double*[nthreads];
     double **vis_imag_tmp = new double*[nthreads];
+    for (std::size_t i = 0; i < (std::size_t) nthreads; i++) {
+        vis_real_tmp[i] = new double[nu*nv];
+        vis_imag_tmp[i] = new double[nu*nv];
+    }
+
     #pragma omp parallel
     {
     int thread_id = omp_get_thread_num();
 
-    vis_real_tmp[thread_id] = new double[nu*nv];
-    vis_imag_tmp[thread_id] = new double[nu*nv];
     for (std::size_t i = 0; i < (std::size_t) nu*nv; i++) {
         vis_real_tmp[thread_id][i] = 0;
         vis_imag_tmp[thread_id][i] = 0;
