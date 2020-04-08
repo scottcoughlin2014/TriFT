@@ -34,7 +34,7 @@ nr = 100
 nt = 100
 np = 2
 
-r = numpy.logspace(-1.,2.,100)
+r = numpy.logspace(-1.,3.,nr)
 t = numpy.arange(nt)/(nt-1.)*numpy.pi/2
 p = numpy.arange(np)/(np-1.)*2*numpy.pi
 
@@ -46,7 +46,9 @@ m.grid.lam = lam * 1.0e4
 
 # Set the density.
 
-dens = numpy.zeros((nr-1,nt-1,np-1)) + 1.0e-19
+rr, tt, pp = numpy.meshgrid(m.grid.r, m.grid.theta, m.grid.phi, indexing='ij')
+
+dens = 1.0e-19 * (rr / rr.min())**-1.5 * numpy.exp(-0.5*(rr/750.)**4)
 
 m.grid.add_density(dens, d)
 
@@ -59,29 +61,29 @@ m.grid.add_star(source)
 # Run the thermal simulation.
 
 m.run_thermal(code="radmc3d", nphot=1e6, modified_random_walk=True, \
-        verbose=False)
+        verbose=False, setthreads=2)
 
 # Run the image.
 
 t1 = time.time()
 
-m.run_image(name="image", nphot=1e5, npix=100, pixelsize=0.025, lam="1000", \
+m.run_image(name="image", nphot=1e5, npix=25, pixelsize=1.0, lam="1000", \
         phi=0, incl=0, code="radmc3d", dpc=100, verbose=False, \
-        unstructured=True, camera_nrrefine=6)
+        unstructured=True, camera_nrrefine=8, camera_refine_criterion=1, \
+        nostar=True)
 
 print(m.images["image"].x.size**0.5)
 
 # Do the Fourier transform with TrIFT
 
-u, v = numpy.meshgrid(numpy.linspace(-1.e6,1.e6,100), \
-        numpy.linspace(-1.e6,1.e6,100))
-
-u = u.reshape((-1,))
-v = v.reshape((-1,))
+u = numpy.linspace(100.,1.5e7,10000)
+v = numpy.repeat(0.001,10000)
 
 vis = uv.interpolate_model(u, v, numpy.array([2.3e11]), m.images["image"], \
         code="trift", dRA=0., dDec=0.)
 t2 = time.time()
+
+# Calculate the effective resolution.
 
 triang = tri.Triangulation(m.images["image"].x, m.images["image"].y)
 trift_res = numpy.inf
@@ -95,7 +97,7 @@ for triangle in triang.triangles:
             trift_res = length
 print(trift_res)
 
-trift_npix = numpy.sqrt(m.images["image"].x.size)
+trift_npix = int(numpy.sqrt(m.images["image"].x.size))
 trift_time = t2 - t1
 
 # Get the time for each number of pixels.
@@ -130,8 +132,6 @@ plt.gca().tick_params(labelsize=14)
 
 plt.subplots_adjust(right=0.98, top=0.98, bottom=0.15, left=0.15)
 
-plt.gcf().set_size_inches((4.5,4))
-
 plt.show()
 
 # Also make the plot for time vs. effective resolution.
@@ -148,22 +148,19 @@ plt.gca().tick_params(labelsize=14)
 
 plt.subplots_adjust(right=0.95, top=0.98, bottom=0.15, left=0.15)
 
-plt.gcf().set_size_inches((4.5,4))
-
 plt.show()
 
 # Finally, plot the visibilities.
 
 plt.loglog(u/1e3, vis.amp*1000, "k-", \
-        label="Unstructured Fourier Transform, $N_{pix} = 165^2$")
+        label="Unstructured Fourier Transform, $N_{{pix}} = {0:d}^2$".\
+        format(trift_npix))
 
-"""
 for npix in npix_arr:
     good = numpy.nonzero(m.visibilities["image"+str(npix)].real[:,0])
     plt.plot(m.visibilities["image"+str(npix)].u[good]/1e3, \
             m.visibilities["image"+str(npix)].amp[:,0][good]*1000, "-", \
             label="Traditional Image, $N_{{pix}} = {0:d}^2$".format(npix))
-"""
 
 plt.xlabel("u [k$\lambda$]", fontsize=14)
 plt.ylabel(r"F$_{\nu}$ [mJy]", fontsize=14)

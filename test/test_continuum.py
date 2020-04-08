@@ -75,6 +75,8 @@ m.run_image(name="image", nphot=1e5, npix=25, pixelsize=1.0, lam="1000", \
 
 print(m.images["image"].image.shape)
 
+npix_trift = int(m.images["image"].image[:,0].size**0.5)
+
 # Plot the image.
 
 triang = tri.Triangulation(m.images["image"].x, m.images["image"].y)
@@ -117,7 +119,8 @@ m.visibilities["image"] = uv.average(m.visibilities["image"], \
 # Finally, plot the visibilities.
 
 plt.loglog(u/1e3, vis.amp*1000, "k-", \
-        label="Unstructured Fourier Transform, $N_{pix} = 165^2$")
+        label="Unstructured Fourier Transform, $N_{{pix}} = {0:d}^2$".format(\
+        npix_trift))
 
 plt.plot(m.visibilities["image"].u/1e3, m.visibilities["image"].amp*1000, \
         "r-", label="Traditional Image, $N_{pix} = 1024^2$")

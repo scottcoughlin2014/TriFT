@@ -25,9 +25,26 @@ flux[:,1] = numpy.where(numpy.logical_and(numpy.abs(x) < 1, numpy.abs(y) < 1), \
 
 # Plot the image.
 
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8,4))
+
 triang = tri.Triangulation(x, y)
 
-plt.tripcolor(triang, flux[:,1], "ko-")
+for i in range(2):
+    ax[i].tripcolor(triang, flux[:,i], "ko-")
+    ax[i].triplot(triang, "k.-", linewidth=0.1, markersize=0.1)
+
+    ax[i].set_aspect("equal")
+
+    ax[i].set_xlim(-1.5,1.5)
+    ax[i].set_ylim(-1.5,1.5)
+
+    ax[i].set_xlabel("x", fontsize=14)
+    ax[i].set_ylabel("y", fontsize=14)
+
+    ax[i].tick_params(labelsize=14)
+
+fig.subplots_adjust(wspace=0.3)
+
 plt.show()
 
 # Do the Fourier transform with TrIFT
@@ -37,6 +54,11 @@ v = numpy.repeat(0., 1000)
 
 t1 = time.time()
 vis = trift.trift_2D(x, y, flux, u, v, 0.25, 0.25, nthreads=4)
+t2 = time.time()
+print(t2 - t1)
+
+t1 = time.time()
+vis_extended = trift.trift_2Dextended(x, y, flux, u, v, 0.25, 0.25)
 t2 = time.time()
 print(t2 - t1)
 
@@ -52,7 +74,21 @@ vis_analytic[:,1] = 4.*numpy.sinc(2*u) * numpy.sinc(2*v) * \
 
 # Finally, plot the visibilities.
 
+fix, ax = plt.subplots(nrows=1, ncols=2, figsize=(8,4))
+
 for i in range(2):
-    plt.plot(u, vis.real[:,i], "b.-")
-    plt.plot(u, vis_analytic.real[:,i], "r-")
-    plt.show()
+    ax[i].plot(u, vis.real[:,i], "k.-", label="Unstructured Fourier Transform")
+    ax[i].plot(u, vis_extended.real[:,i], "b.-", label="Unstructured Fourier "
+            "Transform, Extended Version")
+    ax[i].plot(u, vis_analytic.real[:,i], "r-", label="Analytic Solution")
+
+    ax[i].set_xlabel("u", fontsize=14)
+    ax[i].set_ylabel("Real Component", fontsize=14)
+
+    ax[i].tick_params(labelsize=14)
+
+#fig.subplots_adjust(left=0.05, bottom=0.45, right=0.98, top=0.99, wspace=0.5)
+
+ax[0].legend(fontsize=10, loc="upper right")
+
+plt.show()

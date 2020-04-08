@@ -34,6 +34,9 @@ plt.triplot(triang, "k.-", linewidth=0.1, markersize=0.1)
 
 plt.axes().set_aspect("equal")
 
+plt.xlim(-1.1,1.1)
+plt.ylim(-1.1,1.1)
+
 plt.xlabel("x", fontsize=14)
 plt.ylabel("y", fontsize=14)
 
@@ -51,6 +54,11 @@ vis = trift.trift_c(x, y, flux, u, v, 0.25, 0.25, nthreads=4)
 t2 = time.time()
 print(t2 - t1)
 
+t1 = time.time()
+vis_extended = trift.trift_cextended(x, y, flux, u, v, 0.25, 0.25)
+t2 = time.time()
+print(t2 - t1)
+
 # Calculate the analytic result.
 
 vis_analytic = scipy.special.jv(1, 2*numpy.pi*u) / u * numpy.exp(2*numpy.pi*\
@@ -59,6 +67,8 @@ vis_analytic = scipy.special.jv(1, 2*numpy.pi*u) / u * numpy.exp(2*numpy.pi*\
 # Finally, plot the visibilities.
 
 plt.plot(u, vis.real, "k.-", label="Unstructured Fourier Transform")
+plt.plot(u, vis_extended.real, "b.-", label="Unstructured Fourier Transform, "
+        "Extended Version")
 plt.plot(u, vis_analytic.real, "r-", label="Analytic Solution")
 
 plt.xlabel("u", fontsize=14)
