@@ -103,7 +103,7 @@ v = numpy.repeat(0.001,10000)
 
 t1 = time.time()
 vis = uv.interpolate_model(u, v, numpy.array([2.3e11]), m.images["image"], \
-        code="trift", dRA=0., dDec=0.)
+        code="trift", dRA=0., dDec=0., nthreads=4)
 t2 = time.time()
 print(t2 - t1)
 

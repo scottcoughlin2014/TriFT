@@ -185,6 +185,10 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu, double dx, 
         double dy, int nthreads) {
 
+    // Use only 1 thread first, otherwise Delaunator could have a segfault.
+
+    omp_set_num_threads(1);
+
     // Set up the coordinates for the triangulation.
 
     std::vector<double> coords;
@@ -198,10 +202,31 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
     delaunator::Delaunator d(coords);
 
+    // Now set to the appropriate number of threads for the remainder of the 
+    // program.
+
+    omp_set_num_threads(nthreads);
+
     // Loop through and take the Fourier transform of each triangle.
     
     std::complex<double> I = std::complex<double>(0., 1.);
     Vector<double, 3> zhat(0., 0., 1.);
+
+    double **vis_real_tmp = new double*[nthreads];
+    double **vis_imag_tmp = new double*[nthreads];
+    for (std::size_t i = 0; i < (std::size_t) nthreads; i++) {
+        vis_real_tmp[i] = new double[nu];
+        vis_imag_tmp[i] = new double[nu];
+    }
+
+    #pragma omp parallel
+    {
+    int thread_id = omp_get_thread_num();
+
+    for (std::size_t i = 0; i < (std::size_t) nu; i++) {
+        vis_real_tmp[thread_id][i] = 0;
+        vis_imag_tmp[thread_id][i] = 0;
+    }
 
     Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
         3>[nu];
@@ -214,7 +239,7 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
     double *bessel0 = new double[nu*3];
     std::complex<double> *exp_part = new std::complex<double>[nu*3];
 
-    //TCREATE(moo); TCLEAR(moo);
+    #pragma omp for
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
         // Calculate the area of the triangle.
 
@@ -229,7 +254,6 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
         // Precompute some aspects of the integral that remain the same.
 
-        //TSTART(moo);
         for (int m = 0; m < 3; m++) {
             // Get the appropriate vertices.
 
@@ -267,7 +291,6 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
                         (uv.dot(uv));
             }
         }
-        //TSTOP(moo);
 
         // Now loop through an do the actual calculation.
 
@@ -308,22 +331,46 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
             // out the integral array.
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                vis_real[k] += (intensity * zhat_cross_ln1.dot(integral[k]) / 
-                    (2.*Area)).real();
-                vis_imag[k] += (intensity * zhat_cross_ln1.dot(integral[k]) / 
-                    (2.*Area)).imag();
+                vis_real_tmp[thread_id][k] += (intensity * 
+                        zhat_cross_ln1.dot(integral[k]) / (2.*Area)).real();
+                vis_imag_tmp[thread_id][k] += (intensity * 
+                        zhat_cross_ln1.dot(integral[k]) / (2.*Area)).imag();
 
                 integral[k] = 0.;
             }
         }
     }
-    //printf("%f\n", TGIVE(moo));
+
+    // Clean up.
+
+    delete[] integral; delete[] bessel1; delete[] bessel0_prefix1;
+    delete[] bessel0_prefix2; delete[] bessel0_prefix3; 
+    delete[] bessel0_prefix4; delete[] bessel0; delete[] exp_part;
+    }
+
+    // Now add together all of the separate vis'.
+
+    #pragma omp parallel for
+    for (std::size_t i = 0; i < (std::size_t) nu; i++) {
+        for (std::size_t j = 0; j < (std::size_t) nthreads; j++) {
+            vis_real[i] += vis_real_tmp[j][i];
+            vis_imag[i] += vis_imag_tmp[j][i];
+        }
+    }
+
+    // And clean up the tmp arrays.
+    
+    for (std::size_t i = 0; i < (std::size_t) nthreads; i++) {
+        delete[] vis_real_tmp[i]; delete[] vis_imag_tmp[i];
+    }
+    delete[] vis_real_tmp; delete[] vis_imag_tmp;
 
     // Do the centering of the data.
 
     Vector<double, 2> center(-dx, -dy);
 
     //TCLEAR(moo); TSTART(moo);
+    #pragma omp parallel for
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
         Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
 
@@ -337,13 +384,6 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
     }
     //TSTOP(moo);
     //printf("%f\n", TGIVE(moo));
-
-    // Clean up.
-
-    delete[] integral; delete[] bessel1; delete[] bessel0_prefix1;
-    delete[] bessel0_prefix2; delete[] bessel0_prefix3; 
-    delete[] bessel0_prefix4; delete[] bessel0; delete[] exp_part;
-
 }
 
 void trift2D(double *x, double *y, double *flux, double *u, double *v,
