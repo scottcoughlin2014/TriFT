@@ -33,7 +33,7 @@ def trift_cextended(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=1, mode="c"] flux, \
         numpy.ndarray[double, ndim=1, mode="c"] u, \
         numpy.ndarray[double, ndim=1, mode="c"] v, \
-        double dx, double dy, **kwargs):
+        double dx, double dy, int nthreads=1):
 
     cdef numpy.ndarray[double, ndim=1] vis_real = numpy.zeros((u.size,), \
             dtype=numpy.double)
@@ -41,7 +41,7 @@ def trift_cextended(numpy.ndarray[double, ndim=1, mode="c"] x, \
             dtype=numpy.double)
 
     trift_extended(&x[0], &y[0], &flux[0], &u[0], &v[0], &vis_real[0], \
-            &vis_imag[0], x.size, u.size, dx, dy)
+            &vis_imag[0], x.size, u.size, dx, dy, nthreads)
 
     cdef numpy.ndarray[complex, ndim=1] vis = vis_real + 1j*vis_imag
 
@@ -73,7 +73,7 @@ def trift_2Dextended(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=2, mode="c"] flux, \
         numpy.ndarray[double, ndim=1, mode="c"] u, \
         numpy.ndarray[double, ndim=1, mode="c"] v, \
-        double dx, double dy, **kwargs):
+        double dx, double dy, int nthreads=1):
 
     cdef int nv = flux.shape[1]
 
@@ -83,7 +83,7 @@ def trift_2Dextended(numpy.ndarray[double, ndim=1, mode="c"] x, \
             dtype=numpy.double)
 
     trift2D_extended(&x[0], &y[0], &flux[0,0], &u[0], &v[0], &vis_real[0,0], \
-            &vis_imag[0,0], x.size, u.size, nv, dx, dy)
+            &vis_imag[0,0], x.size, u.size, nv, dx, dy, nthreads)
 
     cdef numpy.ndarray[complex, ndim=2] vis = vis_real + 1j*vis_imag
 
