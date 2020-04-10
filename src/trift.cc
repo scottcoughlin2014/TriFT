@@ -228,16 +228,9 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
         vis_imag_tmp[thread_id][i] = 0;
     }
 
-    Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
-        3>[nu];
-
-    Vector<double, 3> *bessel1 = new Vector<double, 3>[nu*3];
-    Vector<double, 3> *bessel0_prefix1 = new Vector<double, 3>[nu*3];
-    Vector<double, 3> *bessel0_prefix2 = new Vector<double, 3>[nu*3];
-    double *bessel0_prefix3 = new double[nu*3];
-    Vector<double, 3> *bessel0_prefix4 = new Vector<double, 3>[nu*3];
-    double *bessel0 = new double[nu*3];
-    std::complex<double> *exp_part = new std::complex<double>[nu*3];
+    Vector<std::complex<double>, 3> *integral_part1 = new 
+            Vector<std::complex<double>,3>[nu];
+    std::complex<double> *integral_part2 = new std::complex<double>[nu];
 
     #pragma omp for
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
@@ -277,18 +270,28 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
                 double zhat_dot_lm_cross_uv = zhat.dot(lm.cross(uv));
 
-                bessel0_prefix1[m*nu+k] = zhat_cross_lm;
-                bessel0_prefix2[m*nu+k] = r_mc * zhat_dot_lm_cross_uv;
-                bessel0_prefix3[m*nu+k] = zhat_dot_lm_cross_uv;
-                bessel0_prefix4[m*nu+k] = 2.*uv/uv.dot(uv)*zhat_dot_lm_cross_uv;
+                // The various parts of the long integral equation, just
+                // split up for ease of reading.
 
-                bessel0[m*nu + k] = BesselJ0(uv.dot(lm)/2.);
+                Vector<double, 3> bessel0_prefix1 = zhat_cross_lm;
+                Vector<double, 3> bessel0_prefix2 = r_mc * zhat_dot_lm_cross_uv;
+                double bessel0_prefix3 = zhat_dot_lm_cross_uv;
+                Vector<double, 3> bessel0_prefix4 = 2.*uv/uv.dot(uv)*
+                        zhat_dot_lm_cross_uv;
 
-                bessel1[m*nu + k] = lm * (zhat.dot(lm.cross(uv))/2.) * 
+                double bessel0 = BesselJ0(uv.dot(lm)/2.);
+
+                Vector<double, 3> bessel1 = lm * (zhat_dot_lm_cross_uv/2.) * 
                         BesselJ1(uv.dot(lm)/2.);
 
-                exp_part[m*nu + k] = (cos(r_mc.dot(uv))+ I*sin(r_mc.dot(uv))) / 
-                        (uv.dot(uv));
+                std::complex<double> exp_part = (cos(r_mc.dot(uv))+ I*sin(
+                        r_mc.dot(uv))) / (uv.dot(uv));
+
+                // Now add everything together.
+
+                integral_part1[k] += ((bessel0_prefix1 + I*bessel0_prefix2 - 
+                        bessel0_prefix4) * bessel0 - bessel1) * exp_part;
+                integral_part2[k] += -I*bessel0_prefix3 * bessel0 * exp_part;
             }
         }
 
@@ -312,40 +315,31 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
             Vector<double, 3> ln1 = rn_1 - rn1;
 
-            // Now loop through the UV points and calculate the Fourier
-            // Transform.
-
             Vector<double, 3> zhat_cross_ln1 = zhat.cross(ln1);
 
-            for (int m = 0; m < 3; m++) {
-                for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                    integral[k] += ((bessel0_prefix1[m*nu+k] + 
-                            I*bessel0_prefix2[m*nu+k] - 
-                            I*bessel0_prefix3[m*nu+k]*rn1 - 
-                            bessel0_prefix4[m*nu+k]) * bessel0[m*nu+k] - 
-                            bessel1[m*nu+k]) * exp_part[m*nu+k];
-                }
-            }
-
-            // Finally put into the real and imaginary components, and clean
-            // out the integral array.
+            // Finally put into the real and imaginary components.
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                vis_real_tmp[thread_id][k] += (intensity * 
-                        zhat_cross_ln1.dot(integral[k]) / (2.*Area)).real();
-                vis_imag_tmp[thread_id][k] += (intensity * 
-                        zhat_cross_ln1.dot(integral[k]) / (2.*Area)).imag();
-
-                integral[k] = 0.;
+                vis_real_tmp[thread_id][k] += (intensity * zhat_cross_ln1.dot(
+                        integral_part1[k]+rn1*integral_part2[k]) / 
+                        (2.*Area)).real();
+                vis_imag_tmp[thread_id][k] += (intensity * zhat_cross_ln1.dot(
+                        integral_part1[k]+rn1*integral_part2[k]) / 
+                        (2.*Area)).imag();
             }
+        }
+
+        // Clear out the integral array for the next triangle.
+
+        for (std::size_t k = 0; k < (std::size_t) nu; k++) {
+            integral_part1[k] = 0.;
+            integral_part2[k] = 0.;
         }
     }
 
     // Clean up.
 
-    delete[] integral; delete[] bessel1; delete[] bessel0_prefix1;
-    delete[] bessel0_prefix2; delete[] bessel0_prefix3; 
-    delete[] bessel0_prefix4; delete[] bessel0; delete[] exp_part;
+    delete[] integral_part1; delete [] integral_part2;
     }
 
     // Now add together all of the separate vis'.
@@ -369,7 +363,6 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
 
     Vector<double, 2> center(-dx, -dy);
 
-    //TCLEAR(moo); TSTART(moo);
     #pragma omp parallel for
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
         Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
@@ -382,8 +375,6 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
         vis_real[i] = vis_real_temp;
         vis_imag[i] = vis_imag_temp;
     }
-    //TSTOP(moo);
-    //printf("%f\n", TGIVE(moo));
 }
 
 void trift2D(double *x, double *y, double *flux, double *u, double *v,
@@ -579,16 +570,9 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
         vis_imag_tmp[thread_id][i] = 0;
     }
 
-    Vector<std::complex<double>, 3> *integral = new Vector<std::complex<double>,
-        3>[nu];
-
-    Vector<double, 3> *bessel1 = new Vector<double, 3>[nu*3];
-    Vector<double, 3> *bessel0_prefix1 = new Vector<double, 3>[nu*3];
-    Vector<double, 3> *bessel0_prefix2 = new Vector<double, 3>[nu*3];
-    double *bessel0_prefix3 = new double[nu*3];
-    Vector<double, 3> *bessel0_prefix4 = new Vector<double, 3>[nu*3];
-    double *bessel0 = new double[nu*3];
-    std::complex<double> *exp_part = new std::complex<double>[nu*3];
+    Vector<std::complex<double>, 3> *integral_part1 = new 
+            Vector<std::complex<double>,3>[nu];
+    std::complex<double> *integral_part2 = new std::complex<double>[nu];
 
     #pragma omp for
     for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
@@ -628,18 +612,28 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
 
                 double zhat_dot_lm_cross_uv = zhat.dot(lm.cross(uv));
 
-                bessel0_prefix1[m*nu+k] = zhat_cross_lm;
-                bessel0_prefix2[m*nu+k] = r_mc * zhat_dot_lm_cross_uv;
-                bessel0_prefix3[m*nu+k] = zhat_dot_lm_cross_uv;
-                bessel0_prefix4[m*nu+k] = 2.*uv/uv.dot(uv)*zhat_dot_lm_cross_uv;
+                // The various parts of the long integral equation, just
+                // split up for ease of reading.
 
-                bessel0[m*nu + k] = BesselJ0(uv.dot(lm)/2.);
+                Vector<double, 3> bessel0_prefix1 = zhat_cross_lm;
+                Vector<double, 3> bessel0_prefix2 = r_mc * zhat_dot_lm_cross_uv;
+                double bessel0_prefix3 = zhat_dot_lm_cross_uv;
+                Vector<double, 3> bessel0_prefix4 = 2.*uv/uv.dot(uv)*
+                        zhat_dot_lm_cross_uv;
 
-                bessel1[m*nu + k] = lm * (zhat.dot(lm.cross(uv))/2.) * 
+                double bessel0 = BesselJ0(uv.dot(lm)/2.);
+
+                Vector<double, 3> bessel1 = lm * (zhat_dot_lm_cross_uv/2.) * 
                         BesselJ1(uv.dot(lm)/2.);
 
-                exp_part[m*nu + k] = (cos(r_mc.dot(uv))+ I*sin(r_mc.dot(uv))) / 
-                        (uv.dot(uv));
+                std::complex<double> exp_part = (cos(r_mc.dot(uv))+ I*sin(
+                        r_mc.dot(uv))) / (uv.dot(uv));
+
+                // Now add everything together.
+
+                integral_part1[k] += ((bessel0_prefix1 + I*bessel0_prefix2 - 
+                        bessel0_prefix4) * bessel0 - bessel1) * exp_part;
+                integral_part2[k] += -I*bessel0_prefix3 * bessel0 * exp_part;
             }
         }
 
@@ -661,45 +655,34 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
 
             Vector<double, 3> ln1 = rn_1 - rn1;
 
-            // Now loop through the UV points and calculate the Fourier
-            // Transform.
-
             Vector<double, 3> zhat_cross_ln1 = zhat.cross(ln1);
 
-            for (int m = 0; m < 3; m++) {
-                for (std::size_t k = 0; k < (std::size_t) nu; k++) {
-                    integral[k] += ((bessel0_prefix1[m*nu+k] + 
-                            I*bessel0_prefix2[m*nu+k] - 
-                            I*bessel0_prefix3[m*nu+k]*rn1 - 
-                            bessel0_prefix4[m*nu+k]) * bessel0[m*nu+k] - 
-                            bessel1[m*nu+k]) * exp_part[m*nu+k];
-                }
-            }
-
-            // Finally put into the real and imaginary components, and clean
-            // out the integral array.
+            // Finally put into the real and imaginary components.
 
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 std::size_t idy = k * nv;
 
                 for (std::size_t l = 0; l < (std::size_t) nv; l++) {
-                    vis_real[idy+l] += (flux[d.triangles[i+j]*nv+l] * 
-                            zhat_cross_ln1.dot(integral[k]) / (2.*Area)).real();
-                    vis_imag[idy+l] += (flux[d.triangles[i+j]*nv+l] * 
-                            zhat_cross_ln1.dot(integral[k]) / (2.*Area)).imag();
-
+                    vis_real_tmp[thread_id][idy+l] += (flux[d.triangles[i+j]*
+                            nv+l] * zhat_cross_ln1.dot(integral_part1[k]+rn1*
+                            integral_part2[k]) / (2.*Area)).real();
+                    vis_imag_tmp[thread_id][idy+l] += (flux[d.triangles[i+j]*
+                            nv+l] * zhat_cross_ln1.dot(integral_part1[k]+rn1*
+                            integral_part2[k]) / (2.*Area)).imag();
                 }
-
-                integral[k] = 0.;
             }
         }
-    }
 
+        // Clear out the integral arrays for the next triangle.
+
+        for (std::size_t k = 0; k < (std::size_t) nu; k++) {
+            integral_part1[k] = 0.;
+            integral_part2[k] = 0.;
+        }
+    }
     // Clean up.
 
-    delete[] integral; delete[] bessel1; delete[] bessel0_prefix1;
-    delete[] bessel0_prefix2; delete[] bessel0_prefix3; 
-    delete[] bessel0_prefix4; delete[] bessel0; delete[] exp_part;
+    delete[] integral_part1; delete [] integral_part2;
     }
 
     // Now add together all of the separate vis'.
@@ -723,7 +706,6 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
 
     Vector<double, 2> center(-dx, -dy);
 
-    //TCLEAR(moo); TSTART(moo);
     #pragma omp parallel for
     for (std::size_t i = 0; i < (std::size_t) nu; i++) {
         Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
@@ -739,6 +721,4 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
             vis_imag[i*nv+j] = vis_imag_temp;
         }
     }
-    //TSTOP(moo);
-    //printf("%f\n", TGIVE(moo));
 }
