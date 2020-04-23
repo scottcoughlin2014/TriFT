@@ -134,6 +134,22 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
     //delete[] rn_dot_uv; delete[] sin_rn_dot_uv; delete[] cos_rn_dot_uv;
 }
 
+double FastCos(double x) {
+    /* Approximation from the discussion found here: https://stackoverflow.com/questions/18662261/fastest-implementation-of-sine-cosine-and-square-root-in-c-doesnt-need-to-b */
+    double tp = 1./(2.*pi);
+
+    x *= tp;
+    x -= double(.25) + std::floor(x + double(.25));
+    x *= double(16.) * (std::abs(x) - double(.5));
+    x += double(.225) * x * (std::abs(x) - double(1.));
+
+    return x;
+}
+
+double FastSin(double x) {
+    return FastCos(x - pi/2.);
+}
+
 double BesselJ0(double x) {
     /* Approximation from Tumakov 2019, using their equations 6 and 8. See
      * documentation for additional details.*/
@@ -156,7 +172,7 @@ double BesselJ0(double x) {
         double q = p*p;
 
         return sqrt(p) * (1. + (0.63021018*q - 0.15421257)*q) * 
-                cos(ax - 0.78539816 + (0.25232973*q - 0.19634954)*p);
+                FastCos(ax - 0.78539816 + (0.25232973*q - 0.19634954)*p);
     }
 }
 
@@ -176,9 +192,9 @@ double BesselJ1(double x) {
     double P2 = 2 * root_lambda * root_lambda * root_lambda / sqrt(pi) * q2;
     double p2 = 2 * root_lambda / sqrt(pi) * q2;
 
-    return 0.5 / sqrt(root_denom) * ( (p0 + p1*x2 + p2*x4) * sin(x) / 
+    return 0.5 / sqrt(root_denom) * ( (p0 + p1*x2 + p2*x4) * FastSin(x) / 
             (1 + q1*x2 + q2*x4) + x / root_denom * (P0 + P1*x2 + P2*x4) * 
-            cos(x) / (1 + q1*x2 + q2*x4));
+            FastCos(x) / (1 + q1*x2 + q2*x4));
 }
 
 void trift_extended(double *x, double *y, double *flux, double *u, double *v,
@@ -284,8 +300,8 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
                 Vector<double, 3> bessel1 = lm * (zhat_dot_lm_cross_uv/2.) * 
                         BesselJ1(uv.dot(lm)/2.);
 
-                std::complex<double> exp_part = (cos(r_mc.dot(uv))+ I*sin(
-                        r_mc.dot(uv))) / (uv.dot(uv));
+                std::complex<double> exp_part = (FastCos(r_mc.dot(uv))+ 
+                        I*FastSin(r_mc.dot(uv))) / (uv.dot(uv));
 
                 // Now add everything together.
 
