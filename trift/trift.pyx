@@ -28,6 +28,25 @@ def trift_c(numpy.ndarray[double, ndim=1, mode="c"] x, \
 
     return vis
 
+def trift_cprecalc(numpy.ndarray[double, ndim=1, mode="c"] x, \
+        numpy.ndarray[double, ndim=1, mode="c"] y, \
+        numpy.ndarray[double, ndim=1, mode="c"] flux, \
+        numpy.ndarray[double, ndim=1, mode="c"] u, \
+        numpy.ndarray[double, ndim=1, mode="c"] v, \
+        double dx, double dy, **kwargs):
+
+    cdef numpy.ndarray[double, ndim=1] vis_real = numpy.zeros((u.size,), \
+            dtype=numpy.double)
+    cdef numpy.ndarray[double, ndim=1] vis_imag = numpy.zeros((u.size,), \
+            dtype=numpy.double)
+
+    trift_precalc(&x[0], &y[0], &flux[0], &u[0], &v[0], &vis_real[0], \
+            &vis_imag[0], x.size, u.size, dx, dy)
+
+    cdef numpy.ndarray[complex, ndim=1] vis = vis_real + 1j*vis_imag
+
+    return vis
+
 def trift_cextended(numpy.ndarray[double, ndim=1, mode="c"] x, \
         numpy.ndarray[double, ndim=1, mode="c"] y, \
         numpy.ndarray[double, ndim=1, mode="c"] flux, \
