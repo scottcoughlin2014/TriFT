@@ -138,31 +138,6 @@ void trift_precalc(double *x, double *y, double *flux, double *u, double *v,
         double intensity_triangle = (flux[d.triangles[i]] + 
             flux[d.triangles[i+1]] + flux[d.triangles[i+2]]) / 3.;
 
-        // Check whether the vertices of this triangle have had their values
-        // pre-calculated. If not, do so.
-
-        for (int j = 0; j < 3; j++) {
-            // If this vertex hasn't been calculated, do so and save.
-
-            std::size_t i_rn = d.triangles[i + j];
-            Vector<double, 2> rn(x[i_rn], y[i_rn]);
-
-            if (not vertex_calculated[d.triangles[i+j]]) {
-                CosMap[d.triangles[i+j]] = new double[nu];
-                SinMap[d.triangles[i+j]] = new double[nu];
-
-                double *CosArr = CosMap[d.triangles[i+j]];
-                double *SinArr = SinMap[d.triangles[i+j]];
-                for (std::size_t k = 0; k < (std::size_t)nu; k++) {
-                    double RnDotUvArr = rn.dot(uv[k]);
-                    CosArr[k] = FastCos(RnDotUvArr);
-                    SinArr[k] = FastSin(RnDotUvArr);
-                }
-
-                vertex_calculated[d.triangles[i+j]] = true;
-            }
-        }
-
         // Now, loop through and do the real calculation.
 
         for (int j = 0; j < 3; j++) {
@@ -181,6 +156,23 @@ void trift_precalc(double *x, double *y, double *flux, double *u, double *v,
 
             Vector<double, 2> ln = rn1 - rn;
             Vector<double, 2> ln_1 = rn - rn_1;
+
+            // If this vertex hasn't been calculated, do so and save.
+
+            if (not vertex_calculated[d.triangles[i+j]]) {
+                CosMap[d.triangles[i+j]] = new double[nu];
+                SinMap[d.triangles[i+j]] = new double[nu];
+
+                double *CosArr = CosMap[d.triangles[i+j]];
+                double *SinArr = SinMap[d.triangles[i+j]];
+                for (std::size_t k = 0; k < (std::size_t)nu; k++) {
+                    double RnDotUvArr = rn.dot(uv[k]);
+                    CosArr[k] = FastCos(RnDotUvArr);
+                    SinArr[k] = FastSin(RnDotUvArr);
+                }
+
+                vertex_calculated[d.triangles[i+j]] = true;
+            }
 
             // Now loop through the UV points and calculate the Fourier
             // Transform.
