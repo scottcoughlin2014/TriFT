@@ -126,8 +126,9 @@ void trift_precalc(double *x, double *y, double *flux, double *u, double *v,
     // Set up the uv points array.
 
     Vector<double, 2> *uv = new Vector<double, 2>[nu];
-    for (std::size_t i = 0; i < (std::size_t)nu; i++)
-        Vector<double, 2> uv(2*pi*u[i], 2*pi*v[i]);
+    for (std::size_t i = 0; i < (std::size_t)nu; i++) {
+        uv[i][0] = 2*pi*u[i]; uv[i][1] = 2*pi*v[i];
+    }
 
     // Loop through and take the Fourier transform of each triangle.
     
@@ -527,8 +528,9 @@ void trift2D_precalc(double *x, double *y, double *flux, double *u, double *v,
     // Set up the uv points array.
 
     Vector<double, 2> *uv = new Vector<double, 2>[nu];
-    for (std::size_t i = 0; i < (std::size_t)nu; i++)
-        Vector<double, 2> uv(2*pi*u[i], 2*pi*v[i]);
+    for (std::size_t i = 0; i < (std::size_t)nu; i++) {
+        uv[i][0] = 2*pi*u[i]; uv[i][1] = 2*pi*v[i];
+    }
 
     // Loop through and take the Fourier transform of each triangle.
     
