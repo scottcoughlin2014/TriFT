@@ -1,5 +1,5 @@
 #include "trift.h"
-#include <delaunator.hpp>
+#include <delaunator-header-only.hpp>
 #include "timer.c"
 #include "fastmath.h"
 #include <unordered_map>
