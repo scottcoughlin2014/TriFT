@@ -23,7 +23,7 @@ def trift_c(numpy.ndarray[double, ndim=1, mode="c"] x, \
 
     if x.size * u.size < 1e8:
         trift_precalc(&x[0], &y[0], &flux[0], &u[0], &v[0], &vis_real[0], \
-                &vis_imag[0], x.size, u.size, dx, dy)
+                &vis_imag[0], x.size, u.size, dx, dy, nthreads)
     else:
         trift(&x[0], &y[0], &flux[0], &u[0], &v[0], &vis_real[0], &vis_imag[0],\
                 x.size, u.size, dx, dy, nthreads)
@@ -67,7 +67,7 @@ def trift_2D(numpy.ndarray[double, ndim=1, mode="c"] x, \
 
     if x.size * u.size < 1e8:
         trift2D_precalc(&x[0], &y[0], &flux[0,0], &u[0], &v[0], &vis_real[0,0],\
-                &vis_imag[0,0], x.size, u.size, nv, dx, dy)
+                &vis_imag[0,0], x.size, u.size, nv, dx, dy, nthreads)
     else:
         trift2D(&x[0], &y[0], &flux[0,0], &u[0], &v[0], &vis_real[0,0],\
                 &vis_imag[0,0], x.size, u.size, nv, dx, dy, nthreads)
