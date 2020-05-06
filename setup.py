@@ -6,7 +6,8 @@ import os
 import numpy
 
 trift = Extension("trift.trift",sources=["trift/trift.pyx","src/trift.cc"],\
-        include_dirs=[numpy.get_include(),"./include"], language="c++", \
+        include_dirs=[numpy.get_include(),"./include",\
+        "./delaunator-cpp/include"], language="c++", \
         extra_compile_args=['-std=c++11','-O3','-ffast-math','-fopenmp'],\
         extra_link_args=["-std=c++11",'-O3','-ffast-math','-fopenmp'])
 
