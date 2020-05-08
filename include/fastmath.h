@@ -46,23 +46,28 @@ double BesselJ0(double x) {
 }
 
 double BesselJ1(double x) {
-    /* Approximation from Maass & Martin 2018. We use the last of their 
-     * approximations, which is the most accurate, and only adds a small 
-     * amount of time compared with the other versions. Paper included in 
-     * documentation. */
+    /* Approximation from Tumakov 2019, using their equations 10 and 12. See
+     * documentation for additional details.*/
 
-    double P0 = -0.7763224930; double P1 = -0.03147133771;
-    double p0 = 1.776322448; double p1 = 0.2250803518;
-    double q1 = 0.4120981204; double q2 = 0.006571619275;
-    double lambda = 0.1; double x2 = x*x; double x4 = x2*x2;
-    double root_denom = sqrt(1 + lambda*lambda * x2);
-    double root_lambda = 0.31622776601683794;
+    if (abs(x) < 8) {
+        double z = 0.11994381 * x;
+        double y = z*z;
+        double p1 = y*(y - 2.4087342);
 
-    double P2 = 2 * root_lambda * root_lambda * root_lambda / sqrt(pi) * q2;
-    double p2 = 2 * root_lambda / sqrt(pi) * q2;
+        y = y + p1;
 
-    return 0.5 / sqrt(root_denom) * ( (p0 + p1*x2 + p2*x4) * FastSin(x) / 
-            (1 + q1*x2 + q2*x4) + x / root_denom * (P0 + P1*x2 + P2*x4) * 
-            FastCos(x) / (1 + q1*x2 + q2*x4));
+        double p2 = (p1 + 0.57043493)*(y + 6.0949586) + 9.3528179;
+        double p3 = p2 * (y + 0.24958757) - 0.18457525;
+
+        return z * (p3 * (p1 + 1.3196524) + 0.18651755);
+    }
+    else {
+        double ax = abs(x);
+        double p = 0.63661977 / ax;
+        double q = p * p;
+
+        return sqrt(p) * ( 1. + (0.46263771 - 1.1771851*q)*q) * 
+                FastCos(ax - 2.3561945 + (0.58904862 - 0.63587091*q)*p);
+    }
 }
 
