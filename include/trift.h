@@ -13,19 +13,11 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu,
         double dx, double dy);
 
-void trift_precalc(double *x, double *y, double *flux, double *u, double *v,
-        double *vis_real, double *vis_imag, int nx, int nu,
-        double dx, double dy);
-
 void trift_extended(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu,
         double dx, double dy);
 
 void trift2D(double *x, double *y, double *flux, double *u, double *v,
-        double *vis_real, double *vis_imag, int nx, int nu, int nv,
-        double dx, double dy);
-
-void trift2D_precalc(double *x, double *y, double *flux, double *u, double *v,
         double *vis_real, double *vis_imag, int nx, int nu, int nv,
         double dx, double dy);
 
