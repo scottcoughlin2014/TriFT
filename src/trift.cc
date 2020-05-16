@@ -88,7 +88,7 @@ void trift(double *x, double *y, double *flux, double *u, double *v,
                     FastCos(rn_dot_uv);
                 vis_imag_tmp[thread_id][k] += intensity_triangle * 
                     ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
-                    FastSin(rn_dot_uv);
+                    -FastSin(rn_dot_uv);
             }
         }
     }
@@ -239,7 +239,7 @@ void trift_extended(double *x, double *y, double *flux, double *u, double *v,
                 Vector<double, 3> bessel1 = lm * (zhat_dot_lm_cross_uv/2.) * 
                         BesselJ1(uv.dot(lm)/2.);
 
-                std::complex<double> exp_part = (FastCos(r_mc.dot(uv))+ 
+                std::complex<double> exp_part = (FastCos(r_mc.dot(uv)) -  
                         I*FastSin(r_mc.dot(uv))) / (uv.dot(uv));
 
                 // Now add everything together.
@@ -426,7 +426,7 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
                         FastCos(rn_dot_uv);
                     vis_imag_tmp[thread_id][idy+l] += intensity_triangle[l] * 
                         ln_1_dot_zhat_cross_ln / (ln.dot(uv) * ln_1.dot(uv)) * 
-                        FastSin(rn_dot_uv);
+                        -FastSin(rn_dot_uv);
                 }
             }
         }
@@ -581,7 +581,7 @@ void trift2D_extended(double *x, double *y, double *flux, double *u, double *v,
                 Vector<double, 3> bessel1 = lm * (zhat_dot_lm_cross_uv/2.) * 
                         BesselJ1(uv.dot(lm)/2.);
 
-                std::complex<double> exp_part = (FastCos(r_mc.dot(uv))+ 
+                std::complex<double> exp_part = (FastCos(r_mc.dot(uv)) -  
                         I*FastSin(r_mc.dot(uv))) / (uv.dot(uv));
 
                 // Now add everything together.
