@@ -39,14 +39,8 @@ y = yp
 xx, yy = numpy.meshgrid(numpy.linspace(-15.,15.,1024), \
         numpy.linspace(-15.,15.,1024))
 
-"""
 xp = xx * numpy.cos(-pa) - yy * numpy.sin(-pa)
 yp = xx * numpy.sin(-pa) + yy * numpy.cos(-pa)
-"""
-# NOTE: GALARIO SEEMS TO NOT FLIP THE X_AXIS OF THE IMAGE PROPERLY. IF THERE IS
-# ANY ASYMMETRY IN THE X-DIRECTION, THE VISIBILITIES SEEM TO COME OUT BACKWARDS.
-xp = xx
-yp = yy
 
 rr = numpy.sqrt((xp/numpy.cos(numpy.pi/3))**2 + yp**2)
 
@@ -90,7 +84,14 @@ vis = trift.trift_cextended(x, y, flux, u, v, 0., 0.)
 
 dxy = xx[0,1] - xx[0,0]
 
-vvis = double.sampleImage(fflux, dxy, u, v, PA=pa)
+vvis = double.sampleImage(fflux, dxy, u, v, origin="lower")
+
+# NOTE: GALARIO appears to be off by the complex conjugate, possibly because
+# CASA spits out visibilities that need to be complex conjugated to have the 
+# proper orientation (see note by Urvashi Rau, relayed by Ian through
+# MPoL or Ryan through vis_sample.
+
+vvis = numpy.conj(vvis)
 
 # And do just a standard, numpy fft.
 
