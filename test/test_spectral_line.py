@@ -55,7 +55,7 @@ m.grid.set_wavelength_grid(0.1,1.0e5,500,log=True)
 m.run_image(name="image", nphot=1e5, npix=25, pixelsize=1.0, lam=None, \
         tgas_eq_tdust=True, scattering_mode_max=0, incl_dust=False, \
         incl_lines=True, imolspec=1, iline=2, widthkms=10., linenlam=25, \
-        phi=0, incl=45, code="radmc3d", dpc=100, verbose=False, \
+        pa=0, incl=45, code="radmc3d", dpc=100, verbose=False, \
         unstructured=True, camera_nrrefine=100, camera_refine_criterion=1, \
         nostar=True)
 
@@ -78,7 +78,7 @@ for i, ax in enumerate(axes.flatten()):
 
     ax.set_aspect("equal")
 
-    ax.set_xlim(-10,10)
+    ax.set_xlim(10,-10)
     ax.set_ylim(-10,10)
 
     if i >= 20:
@@ -118,7 +118,7 @@ t1 = time.time()
 m.run_image(name="galario", nphot=1e5, npix=npix, pixelsize=imsize/npix,\
         lam=None, tgas_eq_tdust=True, scattering_mode_max=0, incl_dust=False, \
         incl_lines=True, imolspec=1, iline=2, widthkms=10., linenlam=25, \
-        phi=0, incl=45, code="radmc3d", dpc=100, verbose=False, nostar=True)
+        pa=0, incl=45, code="radmc3d", dpc=100, verbose=False, nostar=True)
 t2 = time.time()
 print(t2 - t1)
 
