@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pdspy.constants.physics import c
 from pdspy.constants.astronomy import arcsec
 import pdspy.interferometry as uv
 import pdspy.modeling as modeling
@@ -55,13 +56,15 @@ m.grid.set_wavelength_grid(0.1,1.0e5,500,log=True)
 m.run_image(name="image", nphot=1e5, npix=25, pixelsize=1.0, lam=None, \
         tgas_eq_tdust=True, scattering_mode_max=0, incl_dust=False, \
         incl_lines=True, imolspec=1, iline=2, widthkms=10., linenlam=25, \
-        pa=0, incl=45, code="radmc3d", dpc=100, verbose=False, \
+        pa=0-180, incl=45, code="radmc3d", dpc=100, verbose=False, \
         unstructured=True, camera_nrrefine=100, camera_refine_criterion=1, \
         nostar=True)
 
 print(m.images["image"].image.shape)
 
 npix_trift = int(m.images["image"].image[:,0].size**0.5)
+
+v = (m.images["image"].freq - 230.538e9) / 230.538e9 * c / 1.0e5
 
 # Plot the image.
 
@@ -73,8 +76,10 @@ fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10,9), \
         hspace=0, wspace=0))
 
 for i, ax in enumerate(axes.flatten()):
-    ax.tripcolor(triang, m.images["image"].image[:,i], "ko-")
-    #plt.triplot(triang, "k.-", linewidth=0.1, markersize=0)
+    ax.tripcolor(triang, m.images["image"].image[:,-int(i+1)], "ko-")
+
+    ax.annotate("v = {0:4.1f} km/s".format(v[-int(i+1)]), xy=(0.1,0.9), \
+            xycoords="axes fraction", color="white")
 
     ax.set_aspect("equal")
 
@@ -118,7 +123,7 @@ t1 = time.time()
 m.run_image(name="galario", nphot=1e5, npix=npix, pixelsize=imsize/npix,\
         lam=None, tgas_eq_tdust=True, scattering_mode_max=0, incl_dust=False, \
         incl_lines=True, imolspec=1, iline=2, widthkms=10., linenlam=25, \
-        pa=0, incl=45, code="radmc3d", dpc=100, verbose=False, nostar=True)
+        pa=0-180, incl=45, code="radmc3d", dpc=100, verbose=False, nostar=True)
 t2 = time.time()
 print(t2 - t1)
 
@@ -137,9 +142,9 @@ fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10,9), \
         hspace=0, wspace=0))
 
 for i, ax in enumerate(axes.flatten()):
-    ax.loglog(vis.u/1e3, vis.amp[:,i]*1000, "k-")
+    ax.loglog(vis.u/1e3, vis.amp[:,-int(i+1)]*1000, "k-")
 
-    ax.plot(vis_galario.u/1e3, vis_galario.amp[:,i]*1000, "r-", \
+    ax.plot(vis_galario.u/1e3, vis_galario.amp[:,-int(i+1)]*1000, "r-", \
             label="Traditional Image, $N_{pix} = 1024^2$")
 
     if i >= 20:
