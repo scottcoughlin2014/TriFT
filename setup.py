@@ -11,4 +11,5 @@ trift = Extension("trift.trift",sources=["trift/trift.pyx","src/trift.cc"],\
         extra_compile_args=['-std=c++11','-Ofast','-march=native'],\
         extra_link_args=["-std=c++11",'-Ofast','-march=native'])
 
-setup(cmdclass = {'build_ext': build_ext}, ext_modules = [trift])
+setup(name="trift", version="0.9.0", packages=["trift"], \
+        cmdclass={'build_ext':build_ext}, ext_modules=[trift])
