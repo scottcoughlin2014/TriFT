@@ -298,6 +298,7 @@ void trift2D(double *x, double *y, double *flux, double *u, double *v,
 
             double ln_1_dot_zhat_cross_ln = ln_1.dot(zhat.cross(ln));
 
+            #pragma omp parallel for default(shared) private(intensity_triangle, ln_1_dot_zhat_cross_ln)
             for (std::size_t k = 0; k < (std::size_t) nu; k++) {
                 Vector <double, 3> uv(2*pi*u[k], 2*pi*v[k], 0.);
 
