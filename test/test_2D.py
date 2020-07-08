@@ -57,10 +57,10 @@ vis = trift.trift_2D(x, y, flux, u, v, 0.25, 0.25, nthreads=4)
 t2 = time.time()
 print(t2 - t1)
 
-t1 = time.time()
-vis_extended = trift.trift_2Dextended(x, y, flux, u, v, 0.25, 0.25, nthreads=4)
-t2 = time.time()
-print(t2 - t1)
+#t1 = time.time()
+#vis_extended = trift.trift_2Dextended(x, y, flux, u, v, 0.25, 0.25, nthreads=4)
+#t2 = time.time()
+#print(t2 - t1)
 
 # Calculate the analytic result.
 
