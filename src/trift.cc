@@ -3,7 +3,6 @@
 #include "timer.c"
 #include "fastmath.h"
 #include <unordered_map>
-#include "cuda_complex.hpp"
 
 
 #ifdef __CUDACC__
@@ -27,9 +26,11 @@ CUDA_CALLABLE_MEMBER
             double *vis_real, double *vis_imag, int nx, int nu, int nv,
             double dx, double dy, int nthreads) {
 
-        // Use only 1 thread first, otherwise Delaunator could have a segfault.
 
-        omp_set_num_threads(1);
+        for (int i=0; i<ndevices; i++){
+            cudaSetDevice(i);
+            gpuErrchk(cudaMemcpy(d_vis_real[i], vis_real, data_stream_length*sizeof(double), cudaMemcpyHostToDevice));
+        }
 
         // Set up the coordinates for the triangulation.
         
@@ -60,8 +61,6 @@ CUDA_CALLABLE_MEMBER
             vis_imag_tmp[i] = new double[nu*nv];
         }
 
-        #pragma omp parallel
-        {
         int thread_id = omp_get_thread_num();
 
         for (std::size_t i = 0; i < (std::size_t) nu*nv; i++) {
@@ -71,7 +70,6 @@ CUDA_CALLABLE_MEMBER
 
         double *intensity_triangle = new double[nv];
 
-        #pragma omp for
         for (std::size_t i = 0; i < d.triangles.size(); i+=3) {
             // Get the intensity of the triangle at each wavelength.
 
@@ -122,12 +120,9 @@ CUDA_CALLABLE_MEMBER
                 }
             }
         }
-        delete[] intensity_triangle;
-        }
 
         // Now add together all of the separate vis'.
 
-        #pragma omp parallel for
         for (std::size_t i = 0; i < (std::size_t) nu*nv; i++) {
             for (std::size_t j = 0; j < (std::size_t) nthreads; j++) {
                 vis_real[i] += vis_real_tmp[j][i];
@@ -147,7 +142,6 @@ CUDA_CALLABLE_MEMBER
         Vector<double, 2> center(-dx, -dy);
 
         //TCLEAR(moo); TSTART(moo);
-        #pragma omp parallel for collapse(2)
         for (std::size_t i = 0; i < (std::size_t) nu; i++) {
             for (std::size_t j = 0; j < (std::size_t) nv; j++) {
                 Vector <double, 2> uv(2*pi*u[i], 2*pi*v[i]);
